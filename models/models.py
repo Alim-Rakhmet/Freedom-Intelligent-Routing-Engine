@@ -51,10 +51,17 @@ class Ticket:
     
     # Вложения (список путей к файлам или URL)
     attachments: Optional[List[str]] = field(default_factory=list)
-    
+
+@dataclass
+class Response:
+    ticket: Ticket
+    manager: Manager
+    business_unit: BusinessUnit
+
     # Поля под AI-обогащение (можно заполнять позже в процессе пайплайна)
-    ai_type: Optional[str] = None
-    ai_sentiment: Optional[str] = None
-    ai_priority: Optional[int] = None
-    ai_language: str = "RU"
-    ai_summary: Optional[str] = None
+    type: str
+    sentiment: str
+    priority: int
+    language: str
+    summary: str
+    

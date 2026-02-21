@@ -2,12 +2,10 @@ import json
 from google import genai
 from google.genai import types
 
-# 1. Инициализация клиента (вставь сюда свой рабочий ключ)
 API_KEY = "AIzaSyApubIr9vqK9_F-qjM2WwLfBhKDKzO-Mp8"
 client = genai.Client(api_key=API_KEY)
 
 def analyze_ticket(description: str) -> dict:
-    """Отправляет текст в актуальный Gemini API и возвращает распарсенный JSON."""
     
     prompt = f"""
     Проанализируй обращение клиента и верни ответ в формате JSON.
@@ -24,12 +22,11 @@ def analyze_ticket(description: str) -> dict:
     """
     
     try:
-        # 2. Вызов API через новый SDK
         response = client.models.generate_content(
-            model='gemini-2.5-flash', # Актуальная быстрая модель
+            model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                response_mime_type="application/json", # Требуем строгий JSON
+                response_mime_type="application/json",
                 temperature=0.1,
             ),
         )

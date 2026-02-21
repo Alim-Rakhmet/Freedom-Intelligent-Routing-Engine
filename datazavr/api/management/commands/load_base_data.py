@@ -9,9 +9,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        data_dir = os.path.join(base_dir, 'data')
         
         # 1. Загрузка Офисов
-        bu_path = os.path.join(base_dir, 'business_units.csv')
+        bu_path = os.path.join(data_dir, 'business_units.csv')
         if os.path.exists(bu_path):
             with open(bu_path, encoding='utf-8') as f:
                 reader = csv.DictReader(f)
@@ -23,7 +24,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Офисы загружены!'))
 
         # 2. Загрузка Менеджеров
-        man_path = os.path.join(base_dir, 'managers.csv')
+        man_path = os.path.join(data_dir, 'managers.csv')
         if os.path.exists(man_path):
             with open(man_path, encoding='utf-8') as f:
                 reader = csv.DictReader(f)

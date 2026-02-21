@@ -59,11 +59,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application' # ЗАМЕНИ 'core' на название твоей папки
 
-# Настройки Базы Данных
+# Настройки Базы Данных (PostgreSQL)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'datazavr',       # Имя твоей базы данных в Postgres
+        'USER': 'postgres',      # Твой пользователь БД (обычно postgres)
+        'PASSWORD': 'password',  # Пароль от твоей БД
+        'HOST': 'localhost',     # Или 127.0.0.1
+        'PORT': '5432',
     }
 }
 

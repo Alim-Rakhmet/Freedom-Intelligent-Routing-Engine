@@ -20,13 +20,11 @@ class Position(str, Enum):
 
 @dataclass
 class BusinessUnit:
-    """Офис (Бизнес-единица)"""
     name: str
     address: str
 
 @dataclass
 class Manager:
-    """Менеджер"""
     full_name: str
     position: Position
     skills: List[str]  # Ожидается список, например: ["VIP", "ENG", "KZ"]
@@ -35,7 +33,6 @@ class Manager:
 
 @dataclass
 class Ticket:
-    """Обращение клиента"""
     client_guid: UUID
     gender: str
     birth_date: date
@@ -49,7 +46,6 @@ class Ticket:
     street: str
     house: str
     
-    # Вложения (список путей к файлам или URL)
     attachments: Optional[List[str]] = field(default_factory=list)
 
 @dataclass

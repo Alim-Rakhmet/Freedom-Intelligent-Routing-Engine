@@ -1,0 +1,7 @@
+import os
+from django.core.asgi import get_asgi_application
+
+# ЗАМЕНИ 'core' на название твоей папки проекта
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+
+application = get_asgi_application()

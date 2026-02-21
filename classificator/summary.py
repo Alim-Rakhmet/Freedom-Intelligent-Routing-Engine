@@ -1,16 +1,17 @@
 import json
-from openai import OpenAI
+import time
+from google import genai
+from google.genai import types
 
-# Вставь сюда свой API-ключ от DeepSeek
-API_KEY = "sk-5447ea793c4d4207ac4a8777eebb9060"
-
-# Инициализируем клиент, переопределяя базовый URL на DeepSeek
-client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
+# ВНИМАНИЕ: Старайся не светить свои реальные API-ключи в чатах, их могут скопировать боты. 
+# Лучше перевыпусти тот ключ, который ты кидал выше, в Google AI Studio!
+API_KEY = "AIzaSyD-WNU8J3KlzY-FKEeTH-npAVCweNXroHE"
+client = genai.Client(api_key=API_KEY)
 
 def analyze_ticket(description: str) -> dict:
     
     prompt = f"""
-    Проанализируй обращение клиента и верни ответ строго в формате JSON.
+    Проанализируй обращение клиента и верни ответ в формате JSON.
     Текст обращения: "{description}"
     
     Схема JSON:
@@ -23,31 +24,41 @@ def analyze_ticket(description: str) -> dict:
     }}
     """
     
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-chat", # Основная модель DeepSeek (V3)
-            messages=[
-                # Системный промпт помогает модели лучше держать формат
-                {"role": "system", "content": "Ты полезный AI-ассистент. Твой ответ всегда должен быть валидным JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"}, # Жестко форсируем выдачу JSON
-            temperature=0.1,
-        )
-        
-        # Достаем текст ответа из структуры OpenAI и парсим его в словарь
-        result_text = response.choices[0].message.content
-        result_dict = json.loads(result_text)
-        return result_dict
-        
-    except Exception as e:
-        print(f"Ошибка при обращении к API DeepSeek: {e}")
-        return {}
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash-lite', # <--- Указали Flash Lite
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
+            )
+            
+            # Получаем текст ответа и превращаем в словарь
+            result_dict = json.loads(response.text)
+            
+            # Опционально: можно добавить time.sleep(4) прямо сюда, 
+            # чтобы делать паузы между запросами и вообще не доводить до 429 ошибки
+            
+            return result_dict
+            
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                print(f"⏳ Уперлись в квоту. Ждем 60 секунд (попытка {attempt + 1}/{max_retries})...")
+                time.sleep(60) # Спим минуту, пока Google не обновит счетчик
+            else:
+                print(f"❌ Ошибка при обращении к API: {e}")
+                return {}
+                
+    return {}
 
 # --- Тестируем ---
 if __name__ == "__main__":
     sample_text = "Сәлеметсіз бе! Менің картамнан белгісіз біреулер 50 000 теңге шешіп алды, тез бұғаттаңыздаршы!"
     
+    print("Запускаем анализ...")
     result = analyze_ticket(sample_text)
     print("Результат анализа:")
     print(json.dumps(result, indent=4, ensure_ascii=False))

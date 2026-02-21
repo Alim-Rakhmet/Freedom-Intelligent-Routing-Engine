@@ -1,11 +1,19 @@
 import ssl
+import os, sys
 from geopy.geocoders import Nominatim
-import os, sys, django
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'datazavr.core.settings')
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+django_root = os.path.join(project_root, 'datazavr')
+if django_root not in sys.path:
+    sys.path.insert(0, django_root)
+
+# Инициализируем Django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+import django
 django.setup()
+
 from geopy.distance import geodesic
-from datazavr.api.models import BusinessUnit, Manager, Ticket
+from api.models import BusinessUnit, Manager, Ticket
 
 geolocator = Nominatim(user_agent="fire_routing_engine_v3")
 

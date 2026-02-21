@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Твое приложение
-    'datazavr.api',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -39,7 +39,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'datazavr.core.urls' # ЗАМЕНИ 'core' на название твоей папки проекта, если оно другое
+ROOT_URLCONF = 'core.urls' # ЗАМЕНИ 'core' на название твоей папки проекта, если оно другое
 
 TEMPLATES = [
     {
@@ -57,17 +57,13 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'datazavr.core.wsgi.application' # ЗАМЕНИ 'core' на название твоей папки
+WSGI_APPLICATION = 'core.wsgi.application' # ЗАМЕНИ 'core' на название твоей папки
 
-# Настройки Базы Данных (PostgreSQL)
+# Настройки Базы Данных
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'datazavr',       # Имя твоей базы данных в Postgres
-        'USER': 'postgres',      # Твой пользователь БД (обычно postgres)
-        'PASSWORD': 'password',  # Пароль от твоей БД
-        'HOST': 'localhost',     # Или 127.0.0.1
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

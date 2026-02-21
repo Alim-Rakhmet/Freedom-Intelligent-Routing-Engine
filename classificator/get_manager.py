@@ -1,12 +1,20 @@
 from typing import List, Optional
-import os, sys, django
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'datazavr.core.settings')
+import os, sys
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+django_root = os.path.join(project_root, 'datazavr')
+if django_root not in sys.path:
+    sys.path.insert(0, django_root)
+
+# Инициализируем Django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+import django
 django.setup()
 
-from datazavr.api.models import Ticket, Manager, BusinessUnit
+from api.models import Ticket, Manager, BusinessUnit
 
-round_robin_counter = 0
+# Record counter per office to ensure round-robin within the office
+office_round_robin_counters = {}
 
 def get_manager(
     ticket: 'Ticket', 
@@ -15,7 +23,6 @@ def get_manager(
     buisness_unit: 'BusinessUnit',
     office_managers: List['Manager']
 ) -> Optional['Manager']:
-    global round_robin_counter
     
     eligible_managers = []
     
@@ -50,11 +57,16 @@ def get_manager(
     # Берем топ-2 менеджеров с наименьшей нагрузкой
     top_candidates = eligible_managers[:2]
     
+    # Initialize counter for this office if it doesn't exist
+    office_id = buisness_unit.id
+    if office_id not in office_round_robin_counters:
+        office_round_robin_counters[office_id] = 0
+        
     # Используем остаток от деления, чтобы чередовать индексы 0 и 1 (поочередно)
-    selected_index = round_robin_counter % len(top_candidates)
+    selected_index = office_round_robin_counters[office_id] % len(top_candidates)
     selected_manager = top_candidates[selected_index]
     
-    round_robin_counter += 1
+    office_round_robin_counters[office_id] += 1
     
     selected_manager.current_load += 1
     

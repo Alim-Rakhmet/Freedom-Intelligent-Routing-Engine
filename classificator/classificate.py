@@ -1,10 +1,13 @@
 import logging
 from typing import List, Optional
 import os, sys, django
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'datazavr.core.settings')
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+django_root = os.path.join(project_root, 'datazavr')
+if django_root not in sys.path:
+    sys.path.insert(0, django_root)
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
-from datazavr.api.models import Ticket, Manager, BusinessUnit, Response
+from api.models import Ticket, Manager, BusinessUnit, Response
 
 from classificator.summary import analyze_ticket
 from classificator.get_office import find_nearest_address
@@ -35,8 +38,8 @@ def classificate(
     # Ищем человека внутри выбранного офиса по хард-скиллам и Round Robin
     target_manager = get_manager(
         ticket=ticket,
-        ticket_type=ai_data.get("ai_type", "Консультация"),
-        language=ai_data.get("ai_language", "RU"),
+        ticket_type=ai_data.get("type", "Консультация"),
+        language=ai_data.get("language", "RU"),
         buisness_unit=target_office,
         office_managers=all_managers
     )

@@ -1,14 +1,16 @@
 import json
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
-API_KEY = "AIzaSyCwwUvULh2ehvVGR-mA_zBxdccmZVwpJn4"
-client = genai.Client(api_key=API_KEY)
+# Вставь сюда свой API-ключ от DeepSeek
+API_KEY = "sk-5447ea793c4d4207ac4a8777eebb9060"
+
+# Инициализируем клиент, переопределяя базовый URL на DeepSeek
+client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
 
 def analyze_ticket(description: str) -> dict:
     
     prompt = f"""
-    Проанализируй обращение клиента и верни ответ в формате JSON.
+    Проанализируй обращение клиента и верни ответ строго в формате JSON.
     Текст обращения: "{description}"
     
     Схема JSON:
@@ -22,19 +24,30 @@ def analyze_ticket(description: str) -> dict:
     """
     
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-            ),
+        response = client.chat.completions.create(
+            model="deepseek-chat", # Основная модель DeepSeek (V3)
+            messages=[
+                # Системный промпт помогает модели лучше держать формат
+                {"role": "system", "content": "Ты полезный AI-ассистент. Твой ответ всегда должен быть валидным JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}, # Жестко форсируем выдачу JSON
+            temperature=0.1,
         )
         
-        # Получаем текст ответа и превращаем в словарь
-        result_dict = json.loads(response.text)
+        # Достаем текст ответа из структуры OpenAI и парсим его в словарь
+        result_text = response.choices[0].message.content
+        result_dict = json.loads(result_text)
         return result_dict
         
     except Exception as e:
-        print(f"Ошибка при обращении к API: {e}")
+        print(f"Ошибка при обращении к API DeepSeek: {e}")
         return {}
+
+# --- Тестируем ---
+if __name__ == "__main__":
+    sample_text = "Сәлеметсіз бе! Менің картамнан белгісіз біреулер 50 000 теңге шешіп алды, тез бұғаттаңыздаршы!"
+    
+    result = analyze_ticket(sample_text)
+    print("Результат анализа:")
+    print(json.dumps(result, indent=4, ensure_ascii=False))

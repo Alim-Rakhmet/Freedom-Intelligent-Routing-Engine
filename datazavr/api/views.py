@@ -1,5 +1,6 @@
 import csv
 import os
+import time
 import concurrent.futures
 from django.conf import settings
 from rest_framework.views import APIView
@@ -79,30 +80,22 @@ class ProcessedTicketsAPIView(APIView):
                 )
                 tickets_to_process.append(ticket)
 
-        # 5. АСИНХРОННАЯ ОБРАБОТКА (ThreadPoolExecutor для ИИ)
+        # 5. ПОСЛЕДОВАТЕЛЬНАЯ ОБРАБОТКА (С задержкой для обхода лимитов Gemini API)
         all_managers = list(Manager.objects.all())
         all_units = list(BusinessUnit.objects.all())
         completed_responses = []
 
-        def process_single_ticket(t):
-            # Передаем объекты в ваш существующий маршрутизатор ИИ
-            # Если classificate() вернет успешный объект Response, он уже будет создан через конструктор Python
-            # Нам нужно будет его только сохранить в БД.
-            return classificate(t, all_units, all_managers)
-
-        # Запускаем 5 потоков одновременно
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            # Запускаем задачи
-            future_to_ticket = {executor.submit(process_single_ticket, t): t for t in tickets_to_process}
-            
-            for future in concurrent.futures.as_completed(future_to_ticket):
-                try:
-                    res_obj = future.result()
-                    if res_obj:
-                        res_obj.save() # Сохраняем в БД то, что вернул classificate
-                        completed_responses.append(res_obj)
-                except Exception as exc:
-                    print(f"Ошибка при обработке тикета {future_to_ticket[future].client_guid}: {exc}")
+        for ticket in tickets_to_process:
+            try:
+                res_obj = classificate(ticket, all_units, all_managers)
+                if res_obj:
+                    res_obj.save() # Сохраняем в БД то, что вернул classificate
+                    completed_responses.append(res_obj)
+                
+                # Задержка 4 сек, чтобы не превысить лимит 15 запросов в минуту (Free Tier)
+                time.sleep(4.1)
+            except Exception as exc:
+                print(f"Ошибка при обработке тикета {ticket.client_guid}: {exc}")
 
         # Сортируем для красоты и сериализуем
         completed_responses.sort(key=lambda x: x.created_at, reverse=True)

@@ -52,6 +52,12 @@ def find_nearest_address(
         
         # Берем любой офис из выбранного города 
         city_offices = [u for u in business_units if target_city in u.address.lower()]
+        
+        # Защита от пустого списка
+        if not city_offices:
+            print(f"⚠️ Офисы со словом {target_city} не найдены! Выбираем любой доступный офис.")
+            return min(business_units, key=lambda u: get_office_load(u, all_managers))
+            
         return min(city_offices, key=lambda u: get_office_load(u, all_managers))
 
     # 1. ПРОВЕРКА СТРАНЫ

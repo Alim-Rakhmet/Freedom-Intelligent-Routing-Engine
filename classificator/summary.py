@@ -2,7 +2,7 @@ import json
 from google import genai
 from google.genai import types
 
-API_KEY = "AIzaSyC7KprjAN4H7j8D0iEFeu-B2omydWWKm1Q"
+API_KEY = "AIzaSyCwwUvULh2ehvVGR-mA_zBxdccmZVwpJn4"
 client = genai.Client(api_key=API_KEY)
 
 def analyze_ticket(description: str) -> dict:

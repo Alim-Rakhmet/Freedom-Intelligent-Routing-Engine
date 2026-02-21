@@ -33,7 +33,7 @@ def get_office_load(office: BusinessUnit, all_managers: list[Manager]) -> int:
 
 def get_city_total_load(city_name: str, business_units: list[BusinessUnit], all_managers: list[Manager]) -> int:
     """Считает общую нагрузку по всем офисам конкретного города (Астана или Алматы)."""
-    city_units = [u for u in business_units if city_name.lower() in u.address.lower()]
+    city_units = [u for u in business_units if city_name.lower() in u.name.lower() or city_name.lower() in u.address.lower()]
     return sum(get_office_load(u, all_managers) for u in city_units)
 
 def find_nearest_address(
@@ -51,7 +51,7 @@ def find_nearest_address(
         print(f"   Нагрузка: Астана({astana_load}) vs Алматы({almaty_load}). Выбрана {target_city.title()}.")
         
         # Берем любой офис из выбранного города 
-        city_offices = [u for u in business_units if target_city in u.address.lower()]
+        city_offices = [u for u in business_units if target_city in u.name.lower() or target_city in u.address.lower()]
         
         # Защита от пустого списка
         if not city_offices:

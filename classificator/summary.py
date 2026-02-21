@@ -2,7 +2,7 @@ import json
 from google import genai
 from google.genai import types
 
-API_KEY = "AIzaSyApubIr9vqK9_F-qjM2WwLfBhKDKzO-Mp8"
+API_KEY = "AIzaSyBtPyuUZDk1ELOVqMUJsAb93WpYETgZXrs"
 client = genai.Client(api_key=API_KEY)
 
 def analyze_ticket(description: str) -> dict:
@@ -13,11 +13,11 @@ def analyze_ticket(description: str) -> dict:
     
     Схема JSON:
     {{
-        "ai_type": "одна из: Жалоба, Смена данных, Консультация, Претензия, Неработоспособность приложения, Мошеннические действия, Спам",
-        "ai_sentiment": "Позитивный, Нейтральный или Негативный",
-        "ai_priority": целое число от 1 до 10,
-        "ai_language": "RU, KZ или ENG",
-        "ai_summary": "Выжимка в 1 предложение"
+        "type": "одна из: Жалоба, Смена данных, Консультация, Претензия, Неработоспособность приложения, Мошеннические действия, Спам",
+        "sentiment": "Позитивный, Нейтральный или Негативный",
+        "priority": целое число от 1 до 10,
+        "language": "RU, KZ или ENG",
+        "summary": "Выжимка в 1 предложение"
     }}
     """
     

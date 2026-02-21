@@ -93,6 +93,6 @@ class ProcessedTicketsAPIView(APIView):
                 serializer = BackendResponseSerializer(res_obj)
                 return DRFResponse([serializer.data]) # Обернул в список, чтобы сохранить формат ответа
             else:
-                return DRFResponse({"error": "AI вернул пустой результат или не нашел менеджера"}, status=500)
+                return DRFResponse(status=204)
         except Exception as exc:
             return DRFResponse({"error": f"Ошибка при обработке тикета {ticket.client_guid}: {exc}"}, status=500)

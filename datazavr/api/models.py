@@ -24,9 +24,6 @@ class Ticket(models.Model):
     street = models.CharField(max_length=255)
     house = models.CharField(max_length=50)
 
-    # Добавлен флаг для пропуска тикетов, которые ИИ или фильтры не могут обработать
-    is_skipped = models.BooleanField(default=False)
-
 class Response(models.Model):
     # СВЯЗЬ С ТИКЕТОМ (обязательно нужна, чтобы знать чей это результат)
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='ai_response')

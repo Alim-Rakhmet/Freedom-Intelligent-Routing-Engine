@@ -77,8 +77,7 @@ class ProcessedTicketsAPIView(APIView):
                         )
 
         # 3. ПОЛУЧАЕМ ОДИН НЕОБРАБОТАННЫЙ ТИКЕТ
-        # Исключаем те, на которые ИИ уже дал ответ, и те, которые мы пометили как пропущенные (ошибочные)
-        ticket = Ticket.objects.filter(ai_response__isnull=True, is_skipped=False).first()
+        ticket = Ticket.objects.filter(ai_response__isnull=True).first()
         
         if not ticket:
             return DRFResponse({"message": "Все тикеты уже обработаны!"}, status=200)
@@ -94,9 +93,6 @@ class ProcessedTicketsAPIView(APIView):
                 serializer = BackendResponseSerializer(res_obj)
                 return DRFResponse([serializer.data]) # Обернул в список, чтобы сохранить формат ответа
             else:
-                # Помечаем тикет как пропущенный, чтобы не зацикливаться на нем
-                ticket.is_skipped = True
-                ticket.save()
-                return DRFResponse(status=204)
+                return DRFResponse({"error": "AI вернул пустой результат или не нашел менеджера"}, status=500)
         except Exception as exc:
             return DRFResponse({"error": f"Ошибка при обработке тикета {ticket.client_guid}: {exc}"}, status=500)

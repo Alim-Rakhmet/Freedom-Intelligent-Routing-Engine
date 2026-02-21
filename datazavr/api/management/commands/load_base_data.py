@@ -17,10 +17,13 @@ class Command(BaseCommand):
             with open(bu_path, encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    BusinessUnit.objects.get_or_create(
-                        name=row.get('Офис', '').strip(),
-                        defaults={'address': row.get('Адрес', '').strip()}
-                    )
+                    office_name = row.get('Офис', '').strip()
+                    office_address = row.get('Адрес', '').strip()
+                    
+                    # Проверяем, есть ли уже такой офис, чтобы не упасть с MultipleObjectsReturned
+                    office = BusinessUnit.objects.filter(name=office_name).first()
+                    if not office:
+                        BusinessUnit.objects.create(name=office_name, address=office_address)
             self.stdout.write(self.style.SUCCESS('Офисы загружены!'))
 
         # 2. Загрузка Менеджеров
@@ -34,13 +37,15 @@ class Command(BaseCommand):
                     if office:
                         skills_raw = row.get('Навыки', '')
                         skills = [s.strip() for s in skills_raw.split(',')] if skills_raw else []
-                        Manager.objects.get_or_create(
-                            full_name=row.get('ФИО', '').strip(),
-                            defaults={
-                                'position': row.get('Должность ', row.get('Должность', '')).strip(),
-                                'skills': skills,
-                                'business_unit': office,
-                                'current_load': int(row.get('Количество обращений в работе', '0') or 0)
-                            }
-                        )
+                        manager_name = row.get('ФИО', '').strip()
+                        
+                        manager = Manager.objects.filter(full_name=manager_name).first()
+                        if not manager:
+                            Manager.objects.create(
+                                full_name=manager_name,
+                                position=row.get('Должность ', row.get('Должность', '')).strip(),
+                                skills=skills,
+                                business_unit=office,
+                                current_load=int(row.get('Количество обращений в работе', '0') or 0)
+                            )
             self.stdout.write(self.style.SUCCESS('Менеджеры загружены!'))

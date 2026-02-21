@@ -22,82 +22,77 @@ from classificator.classificate import classificate
 class ProcessedTicketsAPIView(APIView):
     def get(self, request):
         data_dir = os.path.join(settings.BASE_DIR, 'data')
-        bu_file = os.path.join(data_dir, 'business_units.csv')
-        mgr_file = os.path.join(data_dir, 'managers.csv')
-        tkt_file = os.path.join(data_dir, 'tickets.csv')
+        
+        # 1. ЗАГРУЗКА СПРАВОЧНИКОВ, ЕСЛИ ИХ НЕТ В БД
+        if not BusinessUnit.objects.exists() or not Manager.objects.exists():
+            bu_file = os.path.join(data_dir, 'business_units.csv')
+            mgr_file = os.path.join(data_dir, 'managers.csv')
+            
+            if os.path.exists(bu_file):
+                with open(bu_file, encoding='utf-8-sig') as f:
+                    for row in csv.DictReader(f):
+                        BusinessUnit.objects.get_or_create(
+                            name=row.get('Офис', '').strip(),
+                            defaults={'address': row.get('Адрес', '').strip()}
+                        )
 
-        if not all(os.path.exists(f) for f in [bu_file, mgr_file, tkt_file]):
-            return DRFResponse({"error": "Один из CSV файлов не найден в папке datazavr/data/"}, status=404)
+            if os.path.exists(mgr_file):
+                with open(mgr_file, encoding='utf-8-sig') as f:
+                    for row in csv.DictReader(f):
+                        office_name = row.get('Офис', '').strip()
+                        bu = BusinessUnit.objects.filter(name__icontains=office_name).first()
+                        if bu:
+                            skills_raw = row.get('Навыки', '')
+                            skills_list = [s.strip() for s in skills_raw.split(',')] if skills_raw else []
+                            Manager.objects.get_or_create(
+                                full_name=row.get('ФИО', '').strip(),
+                                defaults={
+                                    'position': row.get('Должность ', row.get('Должность', '')).strip(),
+                                    'skills': skills_list,
+                                    'business_unit': bu,
+                                    'current_load': int(row.get('Количество обращений в работе', '0') or 0)
+                                }
+                            )
 
-        # 1. ОЧИСТКА ДО ВЕДРА
-        Response.objects.all().delete()
-        Ticket.objects.all().delete()
-        Manager.objects.all().delete()
-        BusinessUnit.objects.all().delete()
+        # 2. ЗАГРУЗКА ТИКЕТОВ, ЕСЛИ ИХ НЕТ В БД
+        if not Ticket.objects.exists():
+            tkt_file = os.path.join(data_dir, 'tickets.csv')
+            if os.path.exists(tkt_file):
+                with open(tkt_file, encoding='utf-8-sig') as f:
+                    for row in csv.DictReader(f):
+                        birth_date_raw = row.get('Дата рождения', '')
+                        clean_date = birth_date_raw.split(' ')[0] if birth_date_raw else "2000-01-01"
 
-        # 2. ЗАГРУЗКА БИЗНЕС-ЮНИТОВ
-        with open(bu_file, encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                BusinessUnit.objects.create(
-                    name=row.get('Офис', '').strip(),
-                    address=row.get('Адрес', '').strip()
-                )
+                        Ticket.objects.create(
+                            client_guid=row.get('GUID клиента', ''),
+                            gender=row.get('Пол клиента', ''),
+                            birth_date=clean_date,
+                            segment=row.get('Сегмент клиента', ''),
+                            description=row.get('Описание', ''),
+                            country=row.get('Страна', ''),
+                            region=row.get('Область', ''),
+                            city=row.get('Населённый пункт', ''),
+                            street=row.get('Улица', ''),
+                            house=row.get('Дом', '')
+                        )
 
-        # 3. ЗАГРУЗКА МЕНЕДЖЕРОВ
-        with open(mgr_file, encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                office_name = row.get('Офис', '').strip()
-                bu = BusinessUnit.objects.filter(name__icontains=office_name).first()
-                if bu:
-                    skills_raw = row.get('Навыки', '')
-                    skills_list = [s.strip() for s in skills_raw.split(',')] if skills_raw else []
-                    Manager.objects.create(
-                        full_name=row.get('ФИО', '').strip(),
-                        position=row.get('Должность', '').strip(),
-                        business_unit=bu,
-                        skills=skills_list,
-                        current_load=int(row.get('Количество обращений в работе', '0'))
-                    )
+        # 3. ПОЛУЧАЕМ ОДИН НЕОБРАБОТАННЫЙ ТИКЕТ
+        ticket = Ticket.objects.filter(ai_response__isnull=True).first()
+        
+        if not ticket:
+            return DRFResponse({"message": "Все тикеты уже обработаны!"}, status=200)
 
-        # 4. СОЗДАНИЕ ТИКЕТОВ В БАЗЕ (подготовка к AI)
-        tickets_to_process = []
-        with open(tkt_file, encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                birth_date_raw = row.get('Дата рождения', '')
-                clean_date = birth_date_raw.split(' ')[0] if birth_date_raw else "2000-01-01"
-
-                ticket = Ticket.objects.create(
-                    client_guid=row.get('GUID клиента', ''),
-                    gender=row.get('Пол клиента', ''),
-                    birth_date=clean_date,
-                    segment=row.get('Сегмент клиента', ''),
-                    description=row.get('Описание', ''),
-                    country=row.get('Страна', ''),
-                    region=row.get('Область', ''),
-                    city=row.get('Населённый пункт', ''),
-                    street=row.get('Улица', ''),
-                    house=row.get('Дом', '')
-                )
-                tickets_to_process.append(ticket)
-
-        # 5. ПОСЛЕДОВАТЕЛЬНАЯ ОБРАБОТКА (С задержкой для обхода лимитов Gemini API)
+        # 4. ОБРАБАТЫВАЕМ ТОЛЬКО ЭТОТ ТИКЕТ
         all_managers = list(Manager.objects.all())
         all_units = list(BusinessUnit.objects.all())
-        completed_responses = []
-
-        for ticket in tickets_to_process:
-            try:
-                res_obj = classificate(ticket, all_units, all_managers)
-                if res_obj:
-                    res_obj.save() # Сохраняем в БД то, что вернул classificate
-                    completed_responses.append(res_obj)
-                
-                # Задержка 4 сек, чтобы не превысить лимит 15 запросов в минуту (Free Tier)
-                time.sleep(4.1)
-            except Exception as exc:
-                print(f"Ошибка при обработке тикета {ticket.client_guid}: {exc}")
-
-        # Сортируем для красоты и сериализуем
-        completed_responses.sort(key=lambda x: x.created_at, reverse=True)
-        serializer = BackendResponseSerializer(completed_responses, many=True)
-        return DRFResponse(serializer.data)
+        
+        try:
+            res_obj = classificate(ticket, all_units, all_managers)
+            if res_obj:
+                res_obj.save()
+                serializer = BackendResponseSerializer(res_obj)
+                return DRFResponse([serializer.data]) # Обернул в список, чтобы сохранить формат ответа
+            else:
+                return DRFResponse({"error": "AI вернул пустой результат или не нашел менеджера"}, status=500)
+        except Exception as exc:
+            return DRFResponse({"error": f"Ошибка при обработке тикета {ticket.client_guid}: {exc}"}, status=500)

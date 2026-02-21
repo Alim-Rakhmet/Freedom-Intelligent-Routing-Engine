@@ -88,11 +88,27 @@ class ProcessedTicketsAPIView(APIView):
         
         try:
             res_obj = classificate(ticket, all_units, all_managers)
-            if res_obj:
-                res_obj.save()
-                serializer = BackendResponseSerializer(res_obj)
-                return DRFResponse([serializer.data]) # Обернул в список, чтобы сохранить формат ответа
+            res_obj.save()
+            serializer = BackendResponseSerializer(res_obj)
+            return DRFResponse([serializer.data]) # Обернул в список, чтобы сохранить формат ответа
+            
+        except ValueError as e:
+            error_code = str(e)
+            if error_code == "AI_FAILED":
+                # Не сохраняем пустышку, так как ИИ может временно лежать или упереться в лимиты, пусть попробует снова
+                return DRFResponse({"error": "AI Gemini не смог проанализировать тикет (возможно превышен лимит или пустой ответ)."}, status=502)
+            elif error_code == "MANAGER_NOT_FOUND":
+                Response.objects.create(
+                    ticket=ticket, issue_type="Ошибка распределения", sentiment="N/A", priority=0, language="N/A", summary="Для данного тикета не нашлось подходящего менеджера ни в одном офисе.", assigned_manager=None
+                )
+                return DRFResponse({"message": "Для данного тикета не нашлось подходящего менеджера ни в одном офисе."}, status=204)
+            elif error_code == "OFFICE_NOT_FOUND":
+                Response.objects.create(
+                    ticket=ticket, issue_type="Ошибка распределения", sentiment="N/A", priority=0, language="N/A", summary="Не удалось определить ближайший офис для клиента.", assigned_manager=None
+                )
+                return DRFResponse({"message": "Не удалось определить ближайший офис для клиента."}, status=404)
             else:
-                return DRFResponse({"error": "AI вернул пустой результат или не нашел менеджера"}, status=500)
+                return DRFResponse({"error": str(e)}, status=500)
+                
         except Exception as exc:
-            return DRFResponse({"error": f"Ошибка при обработке тикета {ticket.client_guid}: {exc}"}, status=500)
+            return DRFResponse({"error": f"Непредвиденная ошибка при обработке тикета {ticket.client_guid}: {exc}"}, status=500)

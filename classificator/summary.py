@@ -38,11 +38,3 @@ def analyze_ticket(description: str) -> dict:
     except Exception as e:
         print(f"Ошибка при обращении к API: {e}")
         return {}
-
-# --- Тестируем ---
-if __name__ == "__main__":
-    sample_text = "Сәлеметсіз бе! Менің картамнан белгісіз біреулер 50 000 теңге шешіп алды, тез бұғаттаңыздаршы!"
-    
-    result = analyze_ticket(sample_text)
-    print("Результат анализа:")
-    print(json.dumps(result, indent=4, ensure_ascii=False))

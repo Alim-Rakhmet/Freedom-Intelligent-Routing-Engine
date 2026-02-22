@@ -1,7 +1,11 @@
 import json
 import time
+import logging  # <--- 1. Добавили импорт модуля логирования
 from google import genai
 from google.genai import types
+
+# <--- 2. Настроили формат вывода логов (время, уровень, сообщение)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ВНИМАНИЕ: Старайся не светить свои реальные API-ключи в чатах, их могут скопировать боты. 
 # Лучше перевыпусти тот ключ, который ты кидал выше, в Google AI Studio!
@@ -28,7 +32,7 @@ def analyze_ticket(description: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash-lite', # <--- Указали Flash Lite
+                model='gemini-2.5-flash-lite',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -39,17 +43,19 @@ def analyze_ticket(description: str) -> dict:
             # Получаем текст ответа и превращаем в словарь
             result_dict = json.loads(response.text)
             
-            # Опционально: можно добавить time.sleep(4) прямо сюда, 
-            # чтобы делать паузы между запросами и вообще не доводить до 429 ошибки
+            # <--- 3. ДОБАВЛЕН ЛОГ С ВЫВОДОМ JSON
+            logging.info(f"Сгенерированный JSON от Gemini:\n{json.dumps(result_dict, indent=4, ensure_ascii=False)}")
             
             return result_dict
             
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"⏳ Уперлись в квоту. Ждем 60 секунд (попытка {attempt + 1}/{max_retries})...")
-                time.sleep(60) # Спим минуту, пока Google не обновит счетчик
+                # Заменили print на logging.warning
+                logging.warning(f"⏳ Уперлись в квоту. Ждем 60 секунд (попытка {attempt + 1}/{max_retries})...")
+                time.sleep(60) 
             else:
-                print(f"❌ Ошибка при обращении к API: {e}")
+                # Заменили print на logging.error
+                logging.error(f"❌ Ошибка при обращении к API: {e}")
                 return {}
                 
     return {}
@@ -58,7 +64,6 @@ def analyze_ticket(description: str) -> dict:
 if __name__ == "__main__":
     sample_text = "Сәлеметсіз бе! Менің картамнан белгісіз біреулер 50 000 теңге шешіп алды, тез бұғаттаңыздаршы!"
     
-    print("Запускаем анализ...")
+    logging.info("Запускаем анализ тестового обращения...")
     result = analyze_ticket(sample_text)
-    print("Результат анализа:")
-    print(json.dumps(result, indent=4, ensure_ascii=False))
+    # Нижние принты можно даже убрать, так как функция теперь сама всё логирует

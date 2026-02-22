@@ -25,14 +25,14 @@ def classificate(
     ai_data = analyze_ticket(ticket.description)
     if not ai_data:
         logging.error(f"AI не смог проанализировать тикет {ticket.client_guid}")
-        return None
+        raise ValueError("AI_FAILED")
 
     # 2. Географическая маршрутизация (Geo Модуль)
     # Находим лучший офис с учетом страны, города и нагрузки
     target_office = find_nearest_address(ticket, business_units, all_managers)
     if not target_office:
         logging.error(f"Не удалось найти подходящий офис для тикета {ticket.client_guid}")
-        return None
+        raise ValueError("OFFICE_NOT_FOUND")
 
     # 3. Назначение менеджера (Routing Модуль)
     # Ищем человека внутри выбранного офиса по хард-скиллам и Round Robin
@@ -46,7 +46,7 @@ def classificate(
 
     if not target_manager:
         logging.warning(f"В офисе {target_office.name} нет подходящих менеджеров.")
-        return None
+        raise ValueError("MANAGER_NOT_FOUND")
 
     # 4. Сборка финального ответа
     # Мы используем данные из AI и найденные объекты

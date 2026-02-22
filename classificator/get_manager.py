@@ -47,9 +47,31 @@ def get_manager(
                 
         eligible_managers.append(manager)
         
+    # ЕСЛИ В ЭТОМ ОФИСЕ НИКТО НЕ НАЙДЕН - ВЫРУБАЕМ ПРИСТЯЖКУ К ОФИСУ И ИЩЕМ ПО ВСЕЙ КОМПАНИИ
     if not eligible_managers:
-        print("ВНИМАНИЕ: В данном офисе нет менеджеров, подходящих под условия тикета!")
-        return None
+        print(f"⚠️ В офисе {buisness_unit.name} нет менеджера под тикет '{ticket_type}' с языком '{language}'. Ищем по всем офисам...")
+        
+        for manager in office_managers:
+            # Фильтр VIP/Priority
+            if ticket.segment in ["VIP", "Priority"]:
+                if "VIP" not in manager.skills:
+                    continue
+                    
+            # Фильтр "Смена данных"
+            if ticket_type == "Смена данных":
+                if manager.position != "Глав спец":
+                    continue
+                    
+            # Фильтр по языку
+            if language in ["KZ", "ENG"]:
+                if language not in manager.skills:
+                    continue 
+                    
+            eligible_managers.append(manager)
+            
+        if not eligible_managers:
+            print("❌ КРИТИЧЕСКАЯ ОШИБКА: Ни один менеджер в компании не подходит под этот тикет!")
+            return None
 
 
     eligible_managers.sort(key=lambda m: m.current_load)
@@ -57,8 +79,10 @@ def get_manager(
     # Берем топ-2 менеджеров с наименьшей нагрузкой
     top_candidates = eligible_managers[:2]
     
-    # Initialize counter for this office if it doesn't exist
-    office_id = buisness_unit.id
+    # Initialize counter for this office if it doesn't exist (using a generic "all" ID for fallback cases if managers are from different offices)
+    # Using the top candidate's actual office for the counter to be safe
+    office_id = top_candidates[0].business_unit.id if top_candidates else buisness_unit.id
+    
     if office_id not in office_round_robin_counters:
         office_round_robin_counters[office_id] = 0
         
